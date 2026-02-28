@@ -1,0 +1,72 @@
+# --- Python general ---
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+*.egg
+*.log
+
+# --- Virtual environments ---
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# --- Build & packaging ---
+build/
+dist/
+*.wheel
+*.whl
+*.tar.gz
+
+# --- Jupyter & notebooks ---
+.ipynb_checkpoints/
+*.ipynb
+
+# --- IDE & editor configs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- LLM / ML specific ---
+# Model weights and checkpoints
+*.ckpt
+*.pt
+*.bin
+*.h5
+*.pb
+*.onnx
+
+# Hugging Face cache
+huggingface/
+transformers_cache/
+datasets_cache/
+
+# TensorBoard logs
+logs/
+runs/
+
+# --- Data files ---
+*.csv
+*.tsv
+*.json
+*.parquet
+*.db
+*.sqlite
+*.zip
+*.tar
+*.gz
+
+# --- Secrets & API keys ---
+*.key
+*.pem
+*.env
+secrets.json
+
+# --- OS-specific ---
+.DS_Store
+Thumbs.db
