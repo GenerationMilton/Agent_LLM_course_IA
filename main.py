@@ -27,9 +27,9 @@ Musk nació y se crio en una rica familia de Pretoria (Sudáfrica). Su madre es 
     )
 
     #llm= ChatOpenAI(temperature=0, model="gpt-5")
-    
+
     #Select another llm like ollama install previously in out machine
-    llm = ChatOllama(temperature=0, model="gemma3:270nm")
+    llm = ChatOllama(temperature=0, model="gemma3:270m")
 
     #first chain
     chain = summary_prompt_template | llm
