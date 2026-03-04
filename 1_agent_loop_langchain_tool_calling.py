@@ -31,7 +31,37 @@ def apply_discount(price: float, discount_tier: str) -> float:
 # --- agent Loop ------
 @traceable(name="LangChain Agent Loop")
 def run_agent(question: str):
-    pass
+    #pass
+    tools= [get_product_price, apply_discount]
+    tools_dict = {t.name: t for t in tools}
+
+    llm = init_chat_model(f"ollama:{MODEL}", temperature=0)
+    llm_with_tools = llm.bind_tools(tools)
+
+    print(f"Question: {question}")
+    print("=" * 60)
+
+    mesagges = [
+        SystemMessage(
+            content=(
+                "You are a helpful shopping assistant. "
+                "You have access to a product catalog tool "
+                "and a discount tool.\n\n"
+                "STRICT RULES - You must follow these exactly:\n"
+                "1. NEVER guess or assume any product price. "
+                "You MUST call get_product_price first to get the real price.\n"
+                "2. Only call apply_discount AFTER you have received "
+                "a price from get_product_price. Pass the exact price"
+                "returned by get_product_price - do NOT pass a made-up number.\n"
+                "3. NEVER calculate discounts yourself using math. "
+                "Always use the apply_discount tool.\n"
+                "4. If the user does not specify a discount tier, "
+                "ask them which tier to use - do NOT assume one."
+            )
+        ),
+        HumanMessage(content=question),
+    ]
+
 
 if __name__== "__main__":
     print("Hello LangChain Agent (.bind_tools)!")
