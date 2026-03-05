@@ -25,7 +25,7 @@ def apply_discount(price: float, discount_tier: str) -> float:
     Available tiers: bronze, silver, gold."""
     print(f"   >> Executing apply_discount(price={price}, discount_tier='{discount_tier}')")
     discount_percentages = {"bronze":5, "silver":12, "gold":23}
-    discount = discount_percentages.get(discount, 0)
+    discount = discount_percentages.get(discount_tier, 0)
     return round(price *(1 - discount/100), 2)
 
 # --- agent Loop ------
@@ -62,6 +62,40 @@ def run_agent(question: str):
         HumanMessage(content=question),
     ]
 
+    for iteration in range(1, MAX_ITERATIONS + 1):
+        print(f"\n--- Iteration {iteration} ---")
+
+        ai_message = llm_with_tools.invoke(mesagges)
+
+        tool_calls = ai_message.tool_calls
+
+        #If no tool cals, this is the final answer
+        if not tool_calls:
+            print(f"\nFinal Answer: {ai_message.content}")
+            return ai_message.content
+        
+        # Process only the FIRST tool call - force one tool per iteration
+        tool_call = tool_calls[0]
+        tool_name = tool_call.get("name")
+        tool_args = tool_call.get("args", {})
+        tool_call_id = tool_call.get("id")
+
+        print(f" [Tool Selected] {tool_name} with args: {tool_args}")
+
+        tool_to_use = tools_dict.get(tool_name)
+        if tool_to_use is None:
+            raise ValueError(f"Tool '{tool_name}' not found")
+        
+        observation = tool_to_use.invoke(tool_args)
+
+        print(f" [Tool Result] {observation}")
+
+        mesagges.append(ai_message)
+        mesagges.append(
+            ToolMessage(content=str(observation), tool_call_id=tool_call_id)
+        )
+    print("ERROR: Max interations reached without a final answer")
+    return None
 
 if __name__== "__main__":
     print("Hello LangChain Agent (.bind_tools)!")
