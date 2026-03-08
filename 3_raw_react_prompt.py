@@ -97,39 +97,22 @@ def run_agent(question: str):
     print(f"Question: {question}")
     print("=" * 60)
 
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a helpful shopping assistant. "
-                "You have access to a product catalog tool "
-                "and a discount tool.\n\n"
-                "STRICT RULES — you must follow these exactly:\n"
-                "1. NEVER guess or assume any product price. "
-                "You MUST call get_product_price first to get the real price.\n"
-                "2. Only call apply_discount AFTER you have received "
-                "a price from get_product_price. Pass the exact price "
-                "returned by get_product_price — do NOT pass a made-up number.\n"
-                "3. NEVER calculate discounts yourself using math. "
-                "Always use the apply_discount tool.\n"
-                "4. If the user does not specify a discount tier, "
-                "ask them which tier to use — do NOT assume one."
-            ),
-        },
-        {"role": "user", "content": question},
-    ]
-
     # CHANGE 5: One prompt string replaces the system/user message split.
     prompt = react_prompt.format(question=question)
     scratchpad = ""
 
-
     for iteration in range(1, MAX_ITERATIONS + 1):
         print(f"\n--- Iteration {iteration} ---")
+        full_prompt = prompt + scratchpad
 
-        # Difference 5: ollama.chat() directly instead of llm_with_tools.invoke()
-        response = ollama_chat_traced(messages=messages)
-        ai_message = response.message
+        # Stop token prevents the LLM from generating its own Observation -
+        # we inject the real tool result instead.
+        response = ollama_chat_traced(
+            model=MODEL,
+            messages=[{"role":"user", "content": full_prompt}],
+            options={"stop":["\nObservation"], "temperature":0},
+        )
+        output = response.message.content
 
         tool_calls = ai_message.tool_calls
 
