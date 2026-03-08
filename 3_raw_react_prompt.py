@@ -28,6 +28,7 @@ def apply_discount(price: float, discount_tier: str) -> float:
     """Apply a discount tier to a price and return the final price.
     Available tiers: bronze, silver, gold."""
     print(f"    >> Executing apply_discount(price={price}, discount_tier='{discount_tier}')")
+    price= float(price)
     discount_percentages = {"bronze": 5, "silver": 12, "gold": 23}
     discount = discount_percentages.get(discount_tier, 0)
     return round(price * (1 - discount / 100), 2)
@@ -113,39 +114,50 @@ def run_agent(question: str):
             options={"stop":["\nObservation"], "temperature":0},
         )
         output = response.message.content
+        print(f"LLM Output:\n{output}")
 
-        tool_calls = ai_message.tool_calls
+        print(f"  [Parsing] Looking for Final Answer in LLM output...")
+        final_answer_match = re.search(r"Final Answer:\s*(.+)", output)
+        if final_answer_match:
+            final_answer = final_answer_match.group(1).strip()
+            print(f"  [Parsed] Final Answer: {final_answer}")
+            print("\n" + "=" * 60)
+            print(f"Final Answer: {final_answer}")
+            return final_answer
 
-        # If no tool calls, this is the final answer
-        if not tool_calls:
-            print(f"\nFinal Answer: {ai_message.content}")
-            return ai_message.content
+        # CHANGE 6: Parse tool calls from raw text with regex - fragile if LLM doesn't follow format.
+        print(f"  [Parsing] Looking for Action and Action Unput in LLM output...")
 
-        # Process only the FIRST tool call — force one tool per iteration
-        tool_call = tool_calls[0]
-        # Difference 6: Attribute access (.function.name) instead of dict access (.get("name"))
-        tool_name = tool_call.function.name
-        tool_args = tool_call.function.arguments
+        action_match = re.search(r"Action:\s*(.+)", output)
+        action_input_match = re.search(r"Action Input:\s*(.+)", output)
 
-        print(f"  [Tool Selected] {tool_name} with args: {tool_args}")
+        if not action_match or not action_input_match:
+            print(
+                "  [Parsing] ERROR: Could not parse Action/Action Input from LLM output"
+            )
+            break
 
-        tool_to_use = tools_dict.get(tool_name)
-        if tool_to_use is None:
-            raise ValueError(f"Tool '{tool_name}' not found")
+        tool_name = action_match.group(1).strip()
+        tool_input_raw = action_input_match.group(1).strip()
 
-        # Difference 7: Direct function call instead of tool.invoke()
-        observation = tool_to_use(**tool_args)
+        print(f"  [Tool Selected] {tool_name} with args: {tool_input_raw}")
+
+        # Split comma-separated args; skip key= prefix if LLM output key=value format
+        raw_args = [x.strip() for x in tool_input_raw.split(",")]
+        args = [x.split("=",1)[-1].strip().strip("'\"") for x in raw_args]
+ 
+        print(f"  [Tool Executing] {tool_name}({args})...")
+        if tool_name not in tools:
+            observation = f"Error: Tool '{tool_name}' not found. Available tools: {list[str](tools.keys())}"
+        else:
+            observation = str(tools[tool_name](*args))
 
 
         print(f"  [Tool Result] {observation}")
 
-        messages.append(ai_message)
-        messages.append(
-            {
-                "role": "tool",
-                "content": str(observation),
-            }
-        )
+        # CHANGE 7: History is one growing string re-sent every iteration (replaces messages.append).
+        scratchpad += f"{output}\nObservation: {observation}\nThought:"
+       
 
     print("ERROR: Max iterations reached without a final answer")
     return None
